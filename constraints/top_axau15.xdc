@@ -92,10 +92,10 @@ set_property IOSTANDARD   LVCMOS18   [get_ports {led[*]}]
 set_property SLEW         SLOW       [get_ports {led[*]}]
 
 ## ------------------------------------------------------------
-## IBUFDS_GTE4 placement  (Bank 225 = GT Quad X0Y1, MGTREFCLK0_225)
-## Vivado requires an explicit LOC for manually-instantiated IBUFDS_GTE4.
+## IBUFDS_GTE4 placement  (Bank 225 = GT Quad X0Y1)
+## In UltraScale+, IBUFDS_GTE4 is located at the GTHE4_COMMON site.
 ## ------------------------------------------------------------
-set_property LOC MGTREFCLK0_X0Y1 \
+set_property LOC GTHE4_COMMON_X0Y1 \
     [get_cells -hierarchical -filter {NAME =~ *ibufds_refclk}]
 
 ## ------------------------------------------------------------
@@ -107,6 +107,10 @@ set_clock_groups -asynchronous \
     -group [get_clocks -include_generated_clocks sysclk] \
     -group [get_clocks -include_generated_clocks aurora_refclk] \
     -group [get_clocks eth_rxclk]
+
+## Reset signals driven in the free-running (pre-MMCM) domain are
+## slow control signals; declare false path to MMCM output domains.
+set_false_path -from [get_cells -hierarchical -filter {NAME =~ *clocks/*rsto*_reg}]
 
 set_false_path -to [get_ports {led[*]}]
 set_false_path -to [get_ports eth_reset_n]
