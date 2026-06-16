@@ -61,36 +61,39 @@ begin
     -- Synchronous FIFO (ipb_clk domain) — 16 entries deep
     fifo : xpm_fifo_sync
         generic map(
-            FIFO_DEPTH     => 16,
-            DATA_WIDTH     => 64,
-            FIFO_MEMORY_TYPE => "distributed",
-            READ_MODE      => "fwft",
-            USE_ADV_FEATURES => "0000"
+            FIFO_WRITE_DEPTH  => 16,
+            WRITE_DATA_WIDTH  => 64,
+            READ_DATA_WIDTH   => 64,
+            FIFO_MEMORY_TYPE  => "distributed",
+            READ_MODE         => "fwft",
+            USE_ADV_FEATURES  => "0000"
         )
         port map(
-            clk      => clk,
-            rst      => rst,
-            din      => fifo_din,
-            wr_en    => push,
-            full     => fifo_full,
-            dout     => fifo_dout,
-            rd_en    => fifo_rd,
-            empty    => fifo_empty,
-            wr_ack   => open,
-            overflow => open,
-            underflow=> open,
-            data_valid => open,
-            almost_full  => open,
-            almost_empty => open,
-            prog_full    => open,
-            prog_empty   => open,
+            wr_clk        => clk,
+            rst           => rst,
+            din           => fifo_din,
+            wr_en         => push,
+            full          => fifo_full,
+            dout          => fifo_dout,
+            rd_en         => fifo_rd,
+            empty         => fifo_empty,
+            wr_ack        => open,
+            overflow      => open,
+            underflow     => open,
+            data_valid    => open,
+            almost_full   => open,
+            almost_empty  => open,
+            prog_full     => open,
+            prog_empty    => open,
             wr_data_count => open,
             rd_data_count => open,
-            sleep        => '0',
+            wr_rst_busy   => open,
+            rd_rst_busy   => open,
+            sleep         => '0',
             injectdbiterr => '0',
             injectsbiterr => '0',
-            sbiterr  => open,
-            dbiterr  => open
+            sbiterr       => open,
+            dbiterr       => open
         );
 
     -- Drive Aurora TX AXI-Stream from FIFO (FWFT mode)

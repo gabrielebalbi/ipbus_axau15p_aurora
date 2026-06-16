@@ -68,7 +68,7 @@ create_clock -period 8.000 -name eth_rxclk [get_ports eth_rxclk]
 
 ## ------------------------------------------------------------
 ## Aurora 64B/66B  —  6.25 Gbps  —  SFP1 (FH1223)
-##   Bank 224, lane 0  =  GTHE4_CHANNEL_X0Y0
+##   Bank 225, lane 0  =  GTHE4_CHANNEL_X0Y4
 ##   RefClk: MGTREFCLK0_225 (156.25 MHz, Core board oscillator)
 ##   FMC mapping:
 ##     FPGA TX → FMC_DP0_M2C_P/N → SFP1 TX
@@ -76,13 +76,11 @@ create_clock -period 8.000 -name eth_rxclk [get_ports eth_rxclk]
 ## ------------------------------------------------------------
 
 # MGT reference clock  156.25 MHz  (Core p.9: GTH_CLK_P/N → MGTREFCLK0_225)
-# Ball numbers are MGT-specific — Vivado assigns them via the IP wizard.
-# Create the clock on the IBUFDS_GTE4 output buffer:
-create_clock -period 6.400 -name aurora_refclk \
-    [get_pins -hierarchical -filter {NAME =~ */aurora_*/gt_refclk_ibuf/O}]
+# Clock is created on the package pin; Vivado propagates through IBUFDS_GTE4.
+create_clock -period 6.400 -name aurora_refclk [get_ports aurora_refclk_p]
 
-# Aurora MGT channel location  (Bank 224, lane 0)
-set_property LOC GTHE4_CHANNEL_X0Y0 \
+# Aurora MGT channel location  (Bank 225, lane 0)
+set_property LOC GTHE4_CHANNEL_X0Y4 \
     [get_cells -hierarchical -filter {NAME =~ */aurora_*/gthe4_channel_wrapper_inst/GTHE4_CHANNEL_PRIM_INST}]
 
 ## ------------------------------------------------------------

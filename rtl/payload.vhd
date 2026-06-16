@@ -57,9 +57,17 @@ architecture rtl of payload is
     -- Aurora 156.25 MHz reference clock (after IBUFDS_GTE4)
     signal aurora_refclk_buf : std_logic;
 
-    -- Aurora user clock (recovered from link, typically 156.25 MHz)
+    -- Aurora TX output clock → BUFG_GT → user_clk / sync_clk inputs
+    signal aurora_tx_out_clk : std_logic;
+    signal aurora_clk_bufg_clr : std_logic;
+
+    -- Aurora user clock (~94.7 MHz for 6.25 Gbps 64-bit interface)
     signal aurora_user_clk : std_logic;
     signal aurora_rx_ready : std_logic;
+
+    -- Slv wrappers for GT serial pins (IP uses std_logic_vector(0 downto 0))
+    signal aurora_txp_v : std_logic_vector(0 downto 0);
+    signal aurora_txn_v : std_logic_vector(0 downto 0);
 
     -- Aurora 64B/66B RX AXI4-Stream (8 bytes wide for 64-bit user data)
     signal aurora_rx_tdata  : std_logic_vector(63 downto 0);
@@ -124,16 +132,38 @@ begin
     nuke     <= '0';
     soft_rst <= '0';
 
-    -- Aurora 64B/66B IP (Vivado-generated: aurora_64b66b_0)
+    -- TX serial pins: connect slv wrappers to entity ports
+    aurora_tx_p <= aurora_txp_v(0);
+    aurora_tx_n <= aurora_txn_v(0);
+
+    -- BUFG_GT: route tx_out_clk → user_clk / sync_clk inputs
+    aurora_clk_buf : BUFG_GT
+        port map(
+            I       => aurora_tx_out_clk,
+            CE      => '1',
+            CEMASK  => '0',
+            CLR     => aurora_clk_bufg_clr,
+            CLRMASK => '0',
+            DIV     => "000",
+            O       => aurora_user_clk
+        );
+
+    -- Aurora 64B/66B IP (Vivado-generated: aurora_64b66b_0, SupportLevel=0)
+    -- user_clk and sync_clk are INPUTS driven by tx_out_clk via BUFG_GT.
     aurora_ip : entity work.aurora_64b66b_0
         port map(
-            -- GT serial
-            rxp              => aurora_rx_p,
-            rxn              => aurora_rx_n,
-            txp              => aurora_tx_p,
-            txn              => aurora_tx_n,
-            -- Reference clock 156.25 MHz (IBUFDS_GTE4 output, SupportLevel=0)
+            -- GT serial (std_logic_vector(0 downto 0))
+            rxp              => (0 => aurora_rx_p),
+            rxn              => (0 => aurora_rx_n),
+            txp              => aurora_txp_v,
+            txn              => aurora_txn_v,
+            -- Reference clock 156.25 MHz (IBUFDS_GTE4 output)
             refclk1_in       => aurora_refclk_buf,
+            -- User clocks (inputs in SupportLevel=0)
+            user_clk         => aurora_user_clk,
+            sync_clk         => aurora_user_clk,
+            tx_out_clk       => aurora_tx_out_clk,
+            bufg_gt_clr_out  => aurora_clk_bufg_clr,
             -- RX AXI-Stream
             m_axi_rx_tdata   => aurora_rx_tdata,
             m_axi_rx_tvalid  => aurora_rx_tvalid,
@@ -145,19 +175,42 @@ begin
             s_axi_tx_tready  => aurora_tx_tready,
             s_axi_tx_tkeep   => aurora_tx_tkeep,
             s_axi_tx_tlast   => aurora_tx_tlast,
-            -- Clocks
-            user_clk_out     => aurora_user_clk,
-            sync_clk_out     => open,
-            -- Reset / status
-            reset            => ipb_rst,
+            -- Reset / control
+            reset_pb         => ipb_rst,
+            power_down       => '0',
+            pma_init         => ipb_rst,
+            loopback         => "000",
+            mmcm_not_locked  => '0',
+            -- Status
             channel_up       => aurora_rx_ready,
             lane_up          => open,
             hard_err         => open,
             soft_err         => open,
-            -- GT init
-            gt_reset         => ipb_rst,
-            init_clk         => ipb_clk,
-            sys_reset_out    => open
+            gt_pll_lock      => open,
+            gt_powergood     => open,
+            -- Init and misc
+            init_clk         => clk_aux,
+            sys_reset_out    => open,
+            link_reset_out   => open,
+            gt_rxcdrovrden_in => '0',
+            -- AXI-Lite (not used)
+            s_axi_awaddr     => (others => '0'),
+            s_axi_awvalid    => '0',
+            s_axi_awready    => open,
+            s_axi_wdata      => (others => '0'),
+            s_axi_wstrb      => (others => '0'),
+            s_axi_wvalid     => '0',
+            s_axi_wready     => open,
+            s_axi_bresp      => open,
+            s_axi_bvalid     => open,
+            s_axi_bready     => '1',
+            s_axi_araddr     => (others => '0'),
+            s_axi_arvalid    => '0',
+            s_axi_arready    => open,
+            s_axi_rdata      => open,
+            s_axi_rresp      => open,
+            s_axi_rvalid     => open,
+            s_axi_rready     => '1'
         );
 
     -- Aurora RX → BRAM write path

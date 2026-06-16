@@ -34,6 +34,9 @@ entity eth_axau15_rgmii is
         mdio        : inout std_logic;
         phy_reset_n : out std_logic;
 
+        -- 200 MHz reference for IDELAYCTRL (TEMAC SupportLevel=1 RGMII requires it)
+        refclk      : in  std_logic;
+
         -- Lock indicator (1 = MAC ready)
         locked      : out std_logic;
 
@@ -58,7 +61,7 @@ architecture rtl of eth_axau15_rgmii is
     signal mac_tx_axis_tdata   : std_logic_vector(7 downto 0);
     signal mac_tx_axis_tvalid  : std_logic;
     signal mac_tx_axis_tlast   : std_logic;
-    signal mac_tx_axis_tuser   : std_logic;
+    signal mac_tx_axis_tuser   : std_logic_vector(0 downto 0);
     signal mac_tx_axis_tready  : std_logic;
 
     signal mac_rx_axis_tdata   : std_logic_vector(7 downto 0);
@@ -66,7 +69,7 @@ architecture rtl of eth_axau15_rgmii is
     signal mac_rx_axis_tlast   : std_logic;
     signal mac_rx_axis_tuser   : std_logic;
 
-    signal mac_rx_aclk, mac_tx_aclk : std_logic;
+    signal mac_rx_aclk : std_logic;
     signal glbl_rstn, rx_rstn, tx_rstn : std_logic;
 
     -- PHY reset counter (hold reset for ≥10 ms after power-on)
@@ -101,7 +104,7 @@ begin
     mac_tx_axis_tdata  <= tx_data;
     mac_tx_axis_tvalid <= tx_valid;
     mac_tx_axis_tlast  <= tx_last;
-    mac_tx_axis_tuser  <= tx_error;
+    mac_tx_axis_tuser  <= (0 => tx_error);
     tx_ready           <= mac_tx_axis_tready;
 
     rx_data  <= mac_rx_axis_tdata;
@@ -113,6 +116,7 @@ begin
     mac : entity work.temac_gbe_v9_0
         port map(
             gtx_clk                => gtx_clk,
+            refclk                 => refclk,
             glbl_rstn              => glbl_rstn,
             rx_axi_rstn            => rx_rstn,
             tx_axi_rstn            => tx_rstn,
@@ -143,16 +147,40 @@ begin
             tx_statistics_valid    => open,
             rx_statistics_vector   => open,
             rx_statistics_valid    => open,
+            rx_axis_filter_tuser   => open,
             -- Speed/pause (hardwired)
             tx_ifg_delay           => X"00",
             pause_req              => '0',
             pause_val              => X"0000",
             speedis100             => open,
             speedis10100           => open,
+            inband_link_status     => open,
+            inband_clock_speed     => open,
+            inband_duplex_status   => open,
             -- Status
             rx_reset               => open,
             tx_reset               => open,
-            mac_tx_aclk            => mac_tx_aclk
+            tx_mac_aclk            => open,
+            mac_irq                => open,
+            -- AXI-Lite management (MDIO config, not used at runtime)
+            s_axi_aclk             => gtx_clk,
+            s_axi_resetn           => glbl_rstn,
+            s_axi_awaddr           => (others => '0'),
+            s_axi_awvalid          => '0',
+            s_axi_awready          => open,
+            s_axi_wdata            => (others => '0'),
+            s_axi_wvalid           => '0',
+            s_axi_wready           => open,
+            s_axi_bresp            => open,
+            s_axi_bvalid           => open,
+            s_axi_bready           => '1',
+            s_axi_araddr           => (others => '0'),
+            s_axi_arvalid          => '0',
+            s_axi_arready          => open,
+            s_axi_rdata            => open,
+            s_axi_rresp            => open,
+            s_axi_rvalid           => open,
+            s_axi_rready           => '1'
         );
 
 end rtl;

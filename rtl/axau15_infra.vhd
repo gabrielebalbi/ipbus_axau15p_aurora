@@ -113,6 +113,7 @@ begin
     eth : entity work.eth_axau15_rgmii
         port map(
             gtx_clk      => clk125,
+            refclk       => clk200,
             rst          => rst_eth,
             -- RGMII physical interface
             rgmii_txd    => eth_txd,
