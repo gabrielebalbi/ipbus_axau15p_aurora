@@ -92,26 +92,20 @@ set_property IOSTANDARD   LVCMOS18   [get_ports {led[*]}]
 set_property SLEW         SLOW       [get_ports {led[*]}]
 
 ## ------------------------------------------------------------
-## Clock groups  (prevent false path analysis across domains)
+## IBUFDS_GTE4 placement  (Bank 225 = GT Quad X0Y1, MGTREFCLK0_225)
+## Vivado requires an explicit LOC for manually-instantiated IBUFDS_GTE4.
 ## ------------------------------------------------------------
-create_generated_clock -name ipbus_clk \
-    -source [get_pins -hierarchical -filter {NAME =~ */infra/clocks/mmcm/CLKIN1}] \
-    [get_pins -hierarchical -filter {NAME =~ */infra/clocks/mmcm/CLKOUT1}]
+set_property LOC MGTREFCLK0_X0Y1 \
+    [get_cells -hierarchical -filter {NAME =~ *ibufds_refclk}]
 
-create_generated_clock -name clk_aux \
-    -source [get_pins -hierarchical -filter {NAME =~ */infra/clocks/mmcm/CLKIN1}] \
-    [get_pins -hierarchical -filter {NAME =~ */infra/clocks/mmcm/CLKOUT2}]
-
-create_generated_clock -name clk125 \
-    -source [get_pins -hierarchical -filter {NAME =~ */infra/clocks/mmcm/CLKIN1}] \
-    [get_pins -hierarchical -filter {NAME =~ */infra/clocks/mmcm/CLKOUT3}]
-
+## ------------------------------------------------------------
+## Clock groups  (prevent false path analysis across domains)
+## Vivado auto-derives all MMCM output clocks as generated clocks
+## from sysclk; -include_generated_clocks picks them all up.
+## ------------------------------------------------------------
 set_clock_groups -asynchronous \
-    -group [get_clocks sysclk] \
-    -group [get_clocks -include_generated_clocks ipbus_clk] \
-    -group [get_clocks -include_generated_clocks clk_aux] \
-    -group [get_clocks -include_generated_clocks clk125] \
-    -group [get_clocks aurora_refclk] \
+    -group [get_clocks -include_generated_clocks sysclk] \
+    -group [get_clocks -include_generated_clocks aurora_refclk] \
     -group [get_clocks eth_rxclk]
 
 set_false_path -to [get_ports {led[*]}]

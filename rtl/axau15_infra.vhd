@@ -58,7 +58,7 @@ end axau15_infra;
 architecture rtl of axau15_infra is
 
     signal sysclk                                         : std_logic;
-    signal clk_ipb, clk_ipb_i, clk_aux, clk125, clk200  : std_logic;
+    signal clk_ipb, clk_ipb_i, clk_aux, clk125, clk200, clk333 : std_logic;
     signal locked, eth_locked, clk_locked                 : std_logic;
     signal rst125, rst_ipb, rst_ipb_ctrl, rst_eth, rst_aux, onehz : std_logic;
     signal mac_tx_data, mac_rx_data   : std_logic_vector(7 downto 0);
@@ -84,6 +84,7 @@ begin
             clko_aux      => clk_aux,
             clko_125      => clk125,
             clko_200      => clk200,
+            clko_333      => clk333,
             eth_locked    => eth_locked,
             locked        => clk_locked,
             nuke          => nuke,
@@ -113,7 +114,7 @@ begin
     eth : entity work.eth_axau15_rgmii
         port map(
             gtx_clk      => clk125,
-            refclk       => clk200,
+            refclk       => clk333,
             rst          => rst_eth,
             -- RGMII physical interface
             rgmii_txd    => eth_txd,

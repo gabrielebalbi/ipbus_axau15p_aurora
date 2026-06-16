@@ -26,6 +26,7 @@ entity clocks_us_serdes_rgmii is
         clko_aux      : out std_logic;
         clko_125      : out std_logic;
         clko_200      : out std_logic;
+        clko_333      : out std_logic;   -- 333.333 MHz for TEMAC IDELAYCTRL
         eth_locked    : in  std_logic;
         locked        : out std_logic;
         nuke          : in  std_logic;
@@ -46,9 +47,9 @@ architecture rtl of clocks_us_serdes_rgmii is
     signal clkfb                           : std_logic;
     signal dcm_locked                      : std_logic;
     signal clk_ipb_i, clk_aux_i           : std_logic;
-    signal clk125_i, clk200_i             : std_logic;
+    signal clk125_i, clk200_i, clk333_i   : std_logic;
     signal clk_ipb_b, clk_aux_b           : std_logic;
-    signal clk125_b, clk200_b             : std_logic;
+    signal clk125_b, clk200_b, clk333_b   : std_logic;
     signal d17, d17_d                      : std_logic;
     signal nuke_i, nuke_d, nuke_d2        : std_logic := '0';
     signal eth_done, rst, srst            : std_logic := '0';
@@ -63,6 +64,7 @@ begin
         generic map(
             CLKIN1_PERIOD     => 1000.0 / CLK_FR_FREQ,
             CLKFBOUT_MULT_F   => CLK_VCO / CLK_FR_FREQ,  -- 5.0
+            CLKOUT0_DIVIDE_F  => CLK_VCO / 333.333,       -- 3.0 → 333.333 MHz
             CLKOUT1_DIVIDE    => integer(CLK_VCO / 31.25),   -- 32
             CLKOUT2_DIVIDE    => integer(CLK_VCO / CLK_AUX_FREQ),
             CLKOUT3_DIVIDE    => integer(CLK_VCO / 125.0),   -- 8
@@ -72,6 +74,7 @@ begin
             CLKIN1   => clki_fr,
             CLKFBIN  => clkfb,
             CLKFBOUT => clkfb,
+            CLKOUT0  => clk333_i,
             CLKOUT1  => clk_ipb_i,
             CLKOUT2  => clk_aux_i,
             CLKOUT3  => clk125_i,
@@ -85,11 +88,13 @@ begin
     bufg_aux : BUFG port map(i => clk_aux_i,  o => clk_aux_b);
     bufg_125 : BUFG port map(i => clk125_i,   o => clk125_b);
     bufg_200 : BUFG port map(i => clk200_i,   o => clk200_b);
+    bufg_333 : BUFG port map(i => clk333_i,   o => clk333_b);
 
     clko_ipb <= clk_ipb_b;
     clko_aux <= clk_aux_b;
     clko_125 <= clk125_b;
     clko_200 <= clk200_b;
+    clko_333 <= clk333_b;
     locked   <= dcm_locked;
 
     -- 1 Hz blinker and ~1 ms soft-reset timing
