@@ -22,7 +22,7 @@ set PROJ_DIR   "$PROJ_ROOT/vivado"
 set IP_DIR     "$PROJ_ROOT/ip"
 set IPBUS_DIR  "$PROJ_ROOT/ipbus-firmware"
 
-set PART   xcau15p-2ffvb676-e
+set PART   xcau15p-ffvb676-2-i
 set BOARD  {}
 
 # ------------------------------------------------------------
@@ -48,21 +48,16 @@ set IPBUS_CORE "$IPBUS_DIR/components/ipbus_core/firmware/hdl"
 set IPBUS_UDP  "$IPBUS_DIR/components/ipbus_transport_udp/firmware/hdl"
 set IPBUS_UTIL "$IPBUS_DIR/components/ipbus_util/firmware/hdl"
 
-# Core types package
-add_files -norecurse [glob $IPBUS_CORE/ipbus_package.vhd]
+# ipbus_core: package + fabric + transactor (all HDL files)
+add_files -norecurse [glob $IPBUS_CORE/*.vhd]
 
-# UDP transport + ipbus_ctrl (full set of HDL)
+# UDP transport: entire directory (udp_if_flat + all sub-blocks)
 add_files -norecurse [glob $IPBUS_UDP/*.vhd]
 
-# Utility helpers (clock_div, led_stretcher)
+# Utility: only the files we actually use
 add_files -norecurse [glob $IPBUS_UTIL/led_stretcher.vhd]
 add_files -norecurse [glob $IPBUS_UTIL/ipbus_clock_div.vhd]
-
-# Fabric (address decoder)
-add_files -norecurse [glob $IPBUS_CORE/ipbus_fabric_sel.vhd]
-add_files -norecurse [glob $IPBUS_CORE/ipbus_fabric.vhd]
-add_files -norecurse [glob $IPBUS_CORE/ipbus_trans_decl.vhd]
-add_files -norecurse [glob $IPBUS_CORE/ipbus_transactor.vhd]
+add_files -norecurse [glob $IPBUS_UTIL/masters/ipbus_ctrl.vhd]
 
 # ------------------------------------------------------------
 # Our RTL sources
@@ -93,8 +88,7 @@ set_property -dict [list \
     CONFIG.MAC_Speed           {1000_Mbps} \
     CONFIG.Management_Frequency {125}      \
     CONFIG.SupportLevel        {1}         \
-    CONFIG.Make_MDIO           {true}      \
-    CONFIG.EN_IODELAY          {false}     \
+    CONFIG.Enable_MDIO         {true}      \
 ] [get_ips temac_gbe_v9_0]
 
 generate_target all [get_ips temac_gbe_v9_0]
@@ -130,11 +124,11 @@ set_property -dict [list \
     CONFIG.C_LINE_RATE        {6.25}       \
     CONFIG.C_REFCLK_FREQUENCY {156.25}     \
     CONFIG.C_INIT_CLK         {50}         \
-    CONFIG.C_START_QUAD       {1}          \
-    CONFIG.C_START_LANE       {0}          \
+    CONFIG.C_START_QUAD       {Quad_X0Y1}  \
+    CONFIG.C_START_LANE       {X0Y4}       \
     CONFIG.C_GT_LOC_1         {1}          \
     CONFIG.flow_mode          {None}       \
-    CONFIG.C_UCOLUMN_USED     {y}          \
+    CONFIG.C_UCOLUMN_USED     {right}      \
 ] [get_ips aurora_64b66b_0]
 
 generate_target all [get_ips aurora_64b66b_0]
@@ -144,7 +138,7 @@ export_ip_user_files -of_objects [get_ips aurora_64b66b_0] -no_script -force -qu
 # Final project save
 # ------------------------------------------------------------
 update_compile_order -fileset sources_1
-save_project_as $PROJ_NAME $PROJ_DIR/$PROJ_NAME -force
+save_project
 
 puts ""
 puts "=== Project created: $PROJ_DIR/$PROJ_NAME/$PROJ_NAME.xpr ==="
