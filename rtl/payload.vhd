@@ -18,8 +18,9 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
+library unisim;
+use unisim.VComponents.all;
 use work.ipbus.all;
-use work.ipbus_reg_types.all;
 use work.ipbus_decode_payload.all;
 
 entity payload is
@@ -53,10 +54,12 @@ architecture rtl of payload is
     signal ipb_to_slaves  : ipb_wbus_array(N_SLAVES - 1 downto 0);
     signal ipb_from_slaves: ipb_rbus_array(N_SLAVES - 1 downto 0);
 
+    -- Aurora 156.25 MHz reference clock (after IBUFDS_GTE4)
+    signal aurora_refclk_buf : std_logic;
+
     -- Aurora user clock (recovered from link, typically 156.25 MHz)
     signal aurora_user_clk : std_logic;
     signal aurora_rx_ready : std_logic;
-    signal aurora_reset    : std_logic;
 
     -- Aurora 64B/66B RX AXI4-Stream (8 bytes wide for 64-bit user data)
     signal aurora_rx_tdata  : std_logic_vector(63 downto 0);
@@ -94,6 +97,16 @@ architecture rtl of payload is
 
 begin
 
+    -- IBUFDS_GTE4: differential refclk → single-ended for Aurora IP (SupportLevel=0)
+    ibufds_refclk : IBUFDS_GTE4
+        port map(
+            I    => aurora_refclk_p,
+            IB   => aurora_refclk_n,
+            CEB  => '0',
+            O    => aurora_refclk_buf,
+            ODIV2 => open
+        );
+
     -- IPBus fabric: decode address and fan out to slaves
     fabric : entity work.ipbus_fabric_sel
         generic map(
@@ -119,8 +132,8 @@ begin
             rxn              => aurora_rx_n,
             txp              => aurora_tx_p,
             txn              => aurora_tx_n,
-            -- Reference clock  156.25 MHz
-            refclk1_in       => aurora_refclk_p,  -- IBUFDS_GTE4 inside IP
+            -- Reference clock 156.25 MHz (IBUFDS_GTE4 output, SupportLevel=0)
+            refclk1_in       => aurora_refclk_buf,
             -- RX AXI-Stream
             m_axi_rx_tdata   => aurora_rx_tdata,
             m_axi_rx_tvalid  => aurora_rx_tvalid,
@@ -136,25 +149,23 @@ begin
             user_clk_out     => aurora_user_clk,
             sync_clk_out     => open,
             -- Reset / status
-            reset            => aurora_reset,
+            reset            => ipb_rst,
             channel_up       => aurora_rx_ready,
             lane_up          => open,
             hard_err         => open,
             soft_err         => open,
             -- GT init
-            gt_reset         => '0',
+            gt_reset         => ipb_rst,
             init_clk         => ipb_clk,
             sys_reset_out    => open
         );
-
-    aurora_reset <= not aurora_rx_ready and ipb_rst;
 
     -- Aurora RX → BRAM write path
     rx_path : entity work.aurora_rx_path
         generic map(BRAM_DEPTH_LOG2 => BRAM_DEPTH_LOG2)
         port map(
             clk        => aurora_user_clk,
-            rst        => not aurora_rx_ready,
+            rst        => ipb_rst,
             -- AXI-Stream from Aurora
             rx_tdata   => aurora_rx_tdata,
             rx_tvalid  => aurora_rx_tvalid,

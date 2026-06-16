@@ -16,5 +16,14 @@ __pycache__/
 *.pyc
 .ipynb_checkpoints/
 
-# Doc (binari grandi, non versionare)
+# Vivado project e IP generati
+vivado/
+ip/
+
+# ipbus-firmware (clonare separatamente)
+ipbus-firmware/
+
+# Doc — binari grandi
 doc/*.pdf
+doc/*.zip
+doc/rgmii_ethernet/
